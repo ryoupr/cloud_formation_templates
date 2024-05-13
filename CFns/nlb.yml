@@ -66,6 +66,10 @@ Resources:
       SubnetId: !Ref PublicSubnetOne
       SecurityGroupIds:
         - !Ref InstanceSecurityGroup
+      LaunchTemplate: 
+        LaunchTemplateId: !Ref LaunchTemplate
+        Version: !GetAtt 'LaunchTemplate.LatestVersionNumber'
+
   EC2Instance2:
     Type: "AWS::EC2::Instance"
     Properties:
@@ -120,3 +124,15 @@ Resources:
       Targets:
         - Id: !Ref EC2Instance1
         - Id: !Ref EC2Instance2
+
+  LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: install-httpd-and-start
+      LaunchTemplateData:
+        UserData:
+          Fn::Base64: |
+            #!/bin/bash
+            sudo yum install httpd -y
+            sudo systemctl start httpd
+            sudo systemctl enable httpd

@@ -23,4 +23,6 @@ stuck_name="${base}-${random_str}"
 
 
 # create stuck.
-aws cloudformation create-stack --stack-name $stuck_name --template-body file://${file_path}
+aws cloudformation create-stack --stack-name $stuck_name --template-body file://${file_path}  --no-cli-pager
+aws cloudformation wait stack-create-complete --stack-name $stuck_name
+echo "Waiting for the stack to be created..."
