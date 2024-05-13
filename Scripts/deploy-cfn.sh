@@ -23,6 +23,7 @@ stuck_name="${base}-${random_str}"
 
 
 # create stuck.
+echo "Waiting for the stack to be created..."
 aws cloudformation create-stack --stack-name $stuck_name --template-body file://${file_path}  --no-cli-pager
 aws cloudformation wait stack-create-complete --stack-name $stuck_name
-echo "Waiting for the stack to be created..."
+echo "Stack creation completed!!"
