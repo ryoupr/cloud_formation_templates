@@ -1,0 +1,122 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Create a VPC, subnets, an EC2 instance, and a Network Load Balancer from scratch."
+
+Resources:
+  MyVPC:
+    Type: "AWS::EC2::VPC"
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+
+  PublicSubnetOne:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      VpcId: !Ref MyVPC
+      CidrBlock: 10.0.1.0/24
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: ap-northeast-1a
+
+  PublicSubnetTwo:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      VpcId: !Ref MyVPC
+      CidrBlock: 10.0.2.0/24
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: ap-northeast-1c
+
+  InternetGateway:
+    Type: "AWS::EC2::InternetGateway"
+
+  GatewayAttachment:
+    Type: "AWS::EC2::VPCGatewayAttachment"
+    Properties:
+      VpcId: !Ref MyVPC
+      InternetGatewayId: !Ref InternetGateway
+
+  PublicRouteTable:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      VpcId: !Ref MyVPC
+
+  PublicRoute:
+    Type: "AWS::EC2::Route"
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  SubnetRouteTableAssociationOne:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      SubnetId: !Ref PublicSubnetOne
+      RouteTableId: !Ref PublicRouteTable
+
+  SubnetRouteTableAssociationTwo:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      SubnetId: !Ref PublicSubnetTwo
+      RouteTableId: !Ref PublicRouteTable
+
+  EC2Instance1:
+    Type: "AWS::EC2::Instance"
+    Properties:
+      ImageId: "ami-0ab3794db9457b60a"
+      InstanceType: "t2.micro"
+      SubnetId: !Ref PublicSubnetOne
+      SecurityGroupIds:
+        - !Ref InstanceSecurityGroup
+  EC2Instance2:
+    Type: "AWS::EC2::Instance"
+    Properties:
+      ImageId: "ami-0ab3794db9457b60a"
+      InstanceType: "t2.micro"
+      SubnetId: !Ref PublicSubnetOne
+      SecurityGroupIds:
+        - !Ref InstanceSecurityGroup
+
+  InstanceSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: "Allow SSH and HTTP"
+      VpcId: !Ref MyVPC
+      SecurityGroupIngress:
+        - IpProtocol: "tcp"
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: "tcp"
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+
+  MyNetworkLoadBalancer:
+    Type: "AWS::ElasticLoadBalancingV2::LoadBalancer"
+    Properties:
+      Name: MyNLB
+      Type: network
+      Scheme: internet-facing
+      Subnets:
+        - !Ref PublicSubnetOne
+        - !Ref PublicSubnetTwo
+
+  MyListener:
+    Type: "AWS::ElasticLoadBalancingV2::Listener"
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref MyTargetGroup
+      LoadBalancerArn: !Ref MyNetworkLoadBalancer
+      Port: 80
+      Protocol: TCP
+
+  MyTargetGroup:
+    Type: "AWS::ElasticLoadBalancingV2::TargetGroup"
+    Properties:
+      VpcId: !Ref MyVPC
+      Protocol: TCP
+      Port: 80
+      TargetType: instance
+      Targets:
+        - Id: !Ref EC2Instance1
+        - Id: !Ref EC2Instance2
